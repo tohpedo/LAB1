@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 
+
 public class MysqlConnector {
 
 	public MysqlConnector() {
@@ -28,14 +29,48 @@ public class MysqlConnector {
 	}
 
 	private Connection getConnection() {
+		String db_name = "tsdhlwal";
 		try {
-			Connection conn = DriverManager
-					.getConnection("jdbc:mysql://localhost/todo?" + "user=root&password=greatsqldb");
-
+			boolean is_created = false;
+			//Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/" + db_name + "?" + "user=root&password=greatsqldb");
+			Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/?" + "user=root&password=greatsqldb");
 			System.out.println("Got Mysql database connection");
+			ResultSet rs = conn.getMetaData().getCatalogs();
+			while (rs.next()) {
+				if(rs.getString(1).equals(db_name)){
+					conn.setCatalog(db_name);
+					is_created  = true;
+					ResultSet tables = conn.getMetaData().getTables(null, null, "todo", null);
+					if (!tables.next()) {
+						PreparedStatement stmt2 = null;
+						stmt2 = conn.prepareStatement("CREATE TABLE todo (`id` int(11) NOT NULL,"
+								+ " `message` varchar(45) DEFAULT NULL,"
+								+ " `time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+								+ " PRIMARY KEY (`id`));");
+						stmt2.executeUpdate();
+						
+						}
+						
+				}
+			}
+			if(!is_created){
+				PreparedStatement stmt = null;
+				PreparedStatement stmt2 = null;
+				stmt = conn.prepareStatement("CREATE DATABASE " + db_name);
+				stmt.executeUpdate();
+				conn.setCatalog(db_name);
+				stmt2 = conn.prepareStatement("CREATE TABLE todo (`id` int(11) NOT NULL,"
+						+ " `message` varchar(45) DEFAULT NULL,"
+						+ " `time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+						+ " PRIMARY KEY (`id`));");
+				stmt2.executeUpdate();
+				
+			}
 			return conn;
+			
+			
 		} catch (SQLException ex) {
-			// handle any errors
+			
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
 			System.out.println("VendorError: " + ex.getErrorCode());
@@ -118,11 +153,12 @@ public class MysqlConnector {
 			con = getConnection();
 
 			// Execute the query
-			stmt = con.prepareStatement(" insert into todo (id, message, time)" + "values (?, ?, ?)");
+			stmt = con.prepareStatement(" insert into todo (id, message, time)" + "values (?, ?, ?) on duplicate key update message=?, time=?");
 			stmt.setInt(1, id);
 			stmt.setString(2, message);
 			stmt.setTimestamp(3, currentTimestamp);
-			//stmt.setString(4, message);
+			stmt.setString(4, message);
+			stmt.setTimestamp(5, currentTimestamp);
 
 			return stmt.executeUpdate() > 0;
 
