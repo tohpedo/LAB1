@@ -11,8 +11,9 @@ public class MysqlClient {
 
 	public MysqlConnector connector;
 	
-	public MysqlClient(){
-		connector = new MysqlConnector();
+	
+	public MysqlClient(String uri){
+		connector = new MysqlConnector(uri);
 	}
 	
 	
@@ -56,8 +57,15 @@ public class MysqlClient {
 	
 	
 	public boolean replicate(String uri){
-		
-		return false;
+		boolean success = connector.replicate(uri);
+		if(!success){
+			System.err.println("Replication failed");
+			return false;
+		}
+		else{
+			System.out.println("Replication successful");
+			return true;
+		}
 	}
 //---------------------HELPER METHODS---------------------------------------------------------------
 	
@@ -94,7 +102,7 @@ public class MysqlClient {
 		
 		// IF REPLICATE
 		else if (cmd_arr[0].equals("REPLICATE")){
-			System.out.println(cmd_arr[1]);
+			this.replicate(cmd_arr[1]);
 		}
 		
 		// IF GET 
@@ -140,7 +148,7 @@ public class MysqlClient {
 //-------------------------------------------------------------------------------
 	
 	public static void main(String[] args) {
-		MysqlClient client = new MysqlClient();
+		MysqlClient client = new MysqlClient("localhost/todo"); //default location of database.
 		
 		Scanner sc = new Scanner(System.in);
 		System.out.println("Enter a command: [for help type HELP, to exit type EXIT]");
@@ -155,12 +163,7 @@ public class MysqlClient {
 		}
 		sc.close();		
 		
-		
-		//client.parse("GET");
-		//System.out.println(client.getAll());
-		//System.out.println(client.getAll());
-		//client.post("please turn down the volume", 90);
-		//System.out.println(client.getAll());	
+
 		
 	}
 

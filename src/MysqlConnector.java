@@ -16,11 +16,11 @@ import java.util.Map;
 
 public class MysqlConnector {
 
-	public MysqlConnector() {
+	private String uri;
+	
+	public MysqlConnector(String uri) {
+		this.uri = uri;
 		try {
-			// The newInstance() call is a work around for some
-			// broken Java implementations
-
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 			System.out.println("JDBC driver registered");
 		} catch (Exception ex) {
@@ -29,11 +29,12 @@ public class MysqlConnector {
 	}
 
 	private Connection getConnection() {
-		String db_name = "tsdhlwal";
+		String[] temp = this.uri.split("/");
+		String db_name = temp[1];
 		try {
 			boolean is_created = false;
 			//Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/" + db_name + "?" + "user=root&password=greatsqldb");
-			Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/?" + "user=root&password=greatsqldb");
+			Connection conn = DriverManager.getConnection("jdbc:mysql://" + this.uri + "?user=root&password=greatsqldb");
 			System.out.println("Got Mysql database connection");
 			ResultSet rs = conn.getMetaData().getCatalogs();
 			while (rs.next()) {
@@ -285,6 +286,87 @@ public class MysqlConnector {
 			// resources in a finally{} block
 			// in reverse-order of their creation
 			// if they are no-longer needed
+			if (stmt != null) {
+				try {
+					stmt.close();
+				} catch (SQLException sqlEx) {
+				} // ignore
+
+				stmt = null;
+			}
+			if(con != null){
+				try {
+					con.close();
+				} catch (SQLException sqlEx) {
+				} // ignore
+
+				con = null;
+			}
+
+		}
+		return false;
+	}
+
+	public String getUri() {
+		return uri;
+	}
+
+	public void setUri(String uri) {
+		this.uri = uri;
+	}
+
+	public boolean replicate(String pUri) {
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		Connection con = null;
+		
+
+		try{
+			Connection source = getConnection();
+			this.setUri(pUri);
+			Connection destination = getConnection();
+			PreparedStatement loadStatement = source.prepareStatement("SELECT * FROM todo");
+			PreparedStatement storeStatement = destination.prepareStatement("INSERT INTO todo (id, message, time) VALUES ( ?, ?, ?)");
+			ResultSet loadedData = loadStatement.executeQuery();
+			while (loadedData.next()) {
+			    storeStatement.setInt(1, loadedData.getInt(1));
+			    storeStatement.setString(2, loadedData.getString(2));
+			    storeStatement.setTimestamp(3, loadedData.getTimestamp(3));
+			    storeStatement.executeUpdate();
+			}
+			
+			return true;
+			
+		}
+		catch(SQLException ex){
+			System.out.println("SQLException: " + ex.getMessage());
+			System.out.println("SQLState: " + ex.getSQLState());
+			System.out.println("VendorError: " + ex.getErrorCode());
+			
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		finally {
+			// it is a good idea to release
+			// resources in a finally{} block
+			// in reverse-order of their creation
+			// if they are no-longer needed
+
+			if (rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException sqlEx) {
+				} // ignore
+
+				rs = null;
+			}
+
 			if (stmt != null) {
 				try {
 					stmt.close();
